@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title></title>
+<script type="text/javascript" src="/static/jquery.min.js"></script>
+<script type="text/javascript">
+$(function(){
+    $("#ok").click(function(){
+        var user = $("#user").val();
+        if(user) location.href="/?user=" + user;
+    })
+});
+</script>
+</head>
+<body>    
+    <h1>WebRTC 对讲 DEMO</h1>
+    <p>
+    需要 Chrome 浏览器，Chrome 36 测试通过
+    </p>
+    <input  id="user" type="text" value="" placeholder="请输入用户名"/>
+    <button id="ok">确定</button>    
+</body>
+</html>

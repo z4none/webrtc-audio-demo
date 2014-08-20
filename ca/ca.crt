@@ -1,0 +1,80 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 1 (0x1)
+        Signature Algorithm: sha512WithRSAEncryption
+        Issuer: C=CN, ST=GuangDong, L=ShenZhen, O=IAmAdmin.com, OU=SystemAdmin Team
+        Validity
+            Not Before: Jun 30 05:46:08 2014 GMT
+            Not After : Jun 30 05:46:08 2015 GMT
+        Subject: C=CN, ST=GuangDong, L=ShenZhen, O=IAmAdmin.com, OU=SystemAdmin Team, CN=www.163.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+            RSA Public Key: (2048 bit)
+                Modulus (2048 bit):
+                    00:b4:33:42:9e:16:fe:51:1f:66:b0:52:6f:4f:0c:
+                    06:86:80:f2:3e:47:53:53:9b:52:c9:55:d2:99:99:
+                    22:5a:60:dc:89:10:8a:52:1e:41:42:49:cc:1a:ae:
+                    0a:87:14:77:c6:8a:92:87:0f:f6:2e:94:86:ff:95:
+                    1a:ae:31:bf:2a:d0:9b:02:c4:08:b2:8c:b8:b8:88:
+                    35:0b:a6:fd:09:95:4f:fa:0f:79:da:c3:a4:fb:be:
+                    49:91:f3:03:b6:ca:47:bd:8b:ee:74:94:c0:0d:d8:
+                    64:51:7e:81:2a:22:b2:4b:55:c1:b1:97:06:4f:d0:
+                    c8:2a:f6:24:ad:47:b5:c9:4f:d3:f2:2c:a8:7f:04:
+                    74:54:b1:17:76:fc:ab:da:54:97:db:e3:02:c2:65:
+                    67:32:55:6f:8a:76:bd:23:dc:7f:2c:c8:1a:cc:6e:
+                    6b:28:99:54:f1:43:29:a2:18:f4:8b:f0:fd:73:f7:
+                    9d:45:06:53:96:bb:d8:ed:0e:99:e0:97:5c:11:8f:
+                    26:b6:9e:09:17:18:35:b6:5a:a3:03:1f:9f:65:d5:
+                    b3:40:c8:9a:bd:f8:0f:c3:69:83:87:f7:26:41:43:
+                    c5:54:d4:96:2a:63:17:93:f7:ef:dd:9b:8a:e9:86:
+                    20:54:70:fb:ab:c5:96:3a:d1:79:3a:47:9b:fc:3c:
+                    45:d5
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Authority Key Identifier: 
+                keyid:4A:C0:89:DC:2E:87:A2:06:A4:98:E4:B1:BA:9D:6E:B1:B4:F1:E2:12
+
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication, TLS Web Client Authentication, Microsoft Server Gated Crypto, Netscape Server Gated Crypto
+            X509v3 Basic Constraints: critical
+                CA:FALSE
+    Signature Algorithm: sha512WithRSAEncryption
+        4b:f2:c8:88:d9:0d:8a:43:e2:80:4a:06:97:78:6d:dc:2a:88:
+        d1:82:c8:21:9c:19:b9:4b:4c:d8:c7:a0:55:3e:37:13:17:db:
+        cc:ea:51:11:1e:96:ec:1f:ba:f6:1f:eb:6d:58:fb:d6:23:85:
+        2f:a4:a6:eb:36:45:c6:59:7a:2c:f7:ee:0d:5b:e1:b6:b9:bd:
+        25:7d:62:07:2f:b9:69:f2:18:49:0b:1f:e1:52:22:04:c1:7f:
+        f4:72:cd:47:fa:0b:5d:08:e8:ba:80:3e:9c:a5:27:13:ba:ff:
+        f7:31:76:bd:1b:4b:e4:eb:8c:13:b8:ad:36:a9:c5:1f:09:3c:
+        a3:8c:36:73:d4:85:5e:53:96:5a:e4:de:dd:a9:a3:f1:d3:aa:
+        0a:14:a6:96:a7:29:40:87:62:00:a4:0c:a1:53:29:c2:e7:a8:
+        72:1d:3d:24:b1:fd:fe:6d:8a:67:e8:66:35:9e:6a:e6:44:eb:
+        d5:03:a1:bf:51:a9:08:7c:39:24:19:ef:49:f0:d0:d8:a7:48:
+        c4:b1:d8:79:8c:9b:fb:f8:a0:91:0b:2f:6a:e2:ee:1e:ec:e1:
+        a4:08:db:62:2d:ed:be:2a:94:7d:6d:d7:c8:fc:79:c0:95:bd:
+        3f:da:e9:25:4b:88:c6:bf:eb:c3:4b:70:96:44:58:68:64:a0:
+        1a:13:fb:8d
+-----BEGIN CERTIFICATE-----
+MIIDxDCCAqygAwIBAgIBATANBgkqhkiG9w0BAQ0FADBmMQswCQYDVQQGEwJDTjES
+MBAGA1UECBMJR3VhbmdEb25nMREwDwYDVQQHEwhTaGVuWmhlbjEVMBMGA1UEChMM
+SUFtQWRtaW4uY29tMRkwFwYDVQQLExBTeXN0ZW1BZG1pbiBUZWFtMB4XDTE0MDYz
+MDA1NDYwOFoXDTE1MDYzMDA1NDYwOFowfDELMAkGA1UEBhMCQ04xEjAQBgNVBAgT
+CUd1YW5nRG9uZzERMA8GA1UEBxMIU2hlblpoZW4xFTATBgNVBAoTDElBbUFkbWlu
+LmNvbTEZMBcGA1UECxMQU3lzdGVtQWRtaW4gVGVhbTEUMBIGA1UEAxMLd3d3LjE2
+My5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC0M0KeFv5RH2aw
+Um9PDAaGgPI+R1NTm1LJVdKZmSJaYNyJEIpSHkFCScwargqHFHfGipKHD/YulIb/
+lRquMb8q0JsCxAiyjLi4iDULpv0JlU/6D3naw6T7vkmR8wO2yke9i+50lMAN2GRR
+foEqIrJLVcGxlwZP0Mgq9iStR7XJT9PyLKh/BHRUsRd2/KvaVJfb4wLCZWcyVW+K
+dr0j3H8syBrMbmsomVTxQymiGPSL8P1z951FBlOWu9jtDpngl1wRjya2ngkXGDW2
+WqMDH59l1bNAyJq9+A/DaYOH9yZBQ8VU1JYqYxeT9+/dm4rphiBUcPurxZY60Xk6
+R5v8PEXVAgMBAAGjZzBlMB8GA1UdIwQYMBaAFErAidwuh6IGpJjksbqdbrG08eIS
+MDQGA1UdJQQtMCsGCCsGAQUFBwMBBggrBgEFBQcDAgYKKwYBBAGCNwoDAwYJYIZI
+AYb4QgQBMAwGA1UdEwEB/wQCMAAwDQYJKoZIhvcNAQENBQADggEBAEvyyIjZDYpD
+4oBKBpd4bdwqiNGCyCGcGblLTNjHoFU+NxMX28zqUREeluwfuvYf621Y+9YjhS+k
+pus2RcZZeiz37g1b4ba5vSV9YgcvuWnyGEkLH+FSIgTBf/RyzUf6C10I6LqAPpyl
+JxO6//cxdr0bS+TrjBO4rTapxR8JPKOMNnPUhV5Tllrk3t2po/HTqgoUppanKUCH
+YgCkDKFTKcLnqHIdPSSx/f5timfoZjWeauZE69UDob9RqQh8OSQZ70nw0NinSMSx
+2HmMm/v4oJELL2ri7h7s4aQI22It7b4qlH1t18j8ecCVvT/a6SVLiMa/68NLcJZE
+WGhkoBoT+40=
+-----END CERTIFICATE-----

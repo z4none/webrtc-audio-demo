@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title></title>
+<style>
+.noselect {
+    /* Prevent text selection */
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+}
+
+#users{
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 80px;
+    background: #222;
+    color: #FFF;
+    width: 200px;
+}
+
+#user_list{
+    padding: 0px;
+    margin: 0px 0px 10px 0px;
+    min-height: 200px;
+    overflow: auto;
+}
+
+#user_list li{
+    padding: 6px 10px 0;
+    list-style: none;
+}
+
+#user_list li.speaking{
+    color:#F93;
+    font-weight:bold;
+}
+
+#fft{
+    position: fixed;
+    left: 0;
+    bottom: 40px;
+    height:40px;
+    width:200px;
+    background:#000;
+}
+
+#speak{
+    width: 200px;
+    margin: 0px;
+    position: fixed;
+    bottom: 0;
+}
+
+#speak{
+    background: #C6F;
+    border: none;
+    height:40px;
+    line-height:40px;
+    outline:none;
+    font-size:20px;
+}
+#speak:disabled{
+    background: #CCC;
+}
+#speak.active{
+    background: #F52;
+}
+#speak:after.active{
+    content: "正在讲话 ..."
+}
+#chats{
+    margin-left:200px;
+    color:#AAA;
+}
+a.chat{
+    display:block;
+    padding: 4px;
+    margin: 4px 0;
+    background: #EEF;
+    text-decoration: none;
+    border:solid 1px #BBB;
+}
+a.playing{
+    background: #FEA;
+}
+a.chat span.user{
+    background: #AAF;
+    padding: 0 4px;
+    margin-right: 10px;
+    font-weight: bold;
+}
+a.chat span.audio_info{
+    
+}
+
+</style>
+<script type="text/javascript" src="/static/jquery.min.js"></script>
+<script type="text/javascript" src="/static/utf8.js"></script>
+<script type="text/javascript" src="/static/resampler.js"></script>
+<script type="text/javascript" src="/static/libmp3lame.js"></script>
+<script type="text/javascript">
+
+navigator.getUserMedia =  navigator.getUserMedia || 
+        navigator.webkitGetUserMedia || 
+        navigator.mozGetUserMedia || 
+        navigator.msGetUserMedia;
+
+window.AudioContext =
+    window.AudioContext || 
+    window.webkitAudioContext;
+
+window.requestAnimFrame = (function(){
+  return  window.requestAnimationFrame       || 
+          window.webkitRequestAnimationFrame || 
+          window.mozRequestAnimationFrame    || 
+          window.oRequestAnimationFrame      || 
+          window.msRequestAnimationFrame     || 
+          function(/* function */ callback, /* DOMElement */ element){
+            window.setTimeout(callback, 1000 / 60);
+          };
+})();
+
+// 获取 Int8Array 头一个字节，表示帧类型
+function get_data_type(arr8){
+    return arr8[0]
+}
+
+// 获取 Int8Array 除去帧头的内容，并转换成 json，utf8 编码
+function get_data_json(arr8){
+    var json_string = Utf8.decode(String.fromCharCode.apply(null, arr8.subarray(4, arr8.length)));
+    var json = JSON.parse(json_string);
+    return json;
+}
+
+// 获取 Int8Array 除去帧头的剩余数据
+function get_data_binary(arr8){
+    return arr8.subarray(4, arr8.length);
+}
+
+// 生成 json 帧
+function gen_data_json(json){
+    var json_string = Utf8.encode(JSON.stringify(json));
+    var arr_buffer = new ArrayBuffer(json_string.length + 4);
+    var arr8 = new Int8Array(arr_buffer);
+    arr8[0] = 0;
+    arr8[1] = 0;
+    arr8[2] = 0;
+    arr8[3] = 0;
+    for (var i=0, len = json_string.length; i < len; i++) {
+        arr8[i + 4] = json_string.charCodeAt(i);
+    }
+    return arr_buffer;
+}
+
+// 合并两个 ArrayBuffer
+var AppendArrayBuffer = function(buffer1, buffer2) {
+    var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
+    tmp.set(new Uint8Array(buffer1), 0);
+    tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
+    return tmp.buffer;
+};
+
+// 是否正在讲话
+var speaking = false;
+function mode_speaking(){
+    $("#speak").addClass("active");
+    $("#speak").text($("#speak").attr("speaking"));
+    speaking = true;
+}
+
+function mode_speak(){
+    $("#speak").removeClass("active");
+    $("#speak").text($("#speak").attr("speak"));
+    speaking = false;
+}
+
+var sample_size     = 2048;
+var sampler_rate    = 16000;
+var bit_rate        = 16;       // kbps
+
+var ws = null;
+var audio_context = null;
+var audio_stream = null;
+var audio_input = null;
+var audio_recorder = null;
+var audio_resampler = null;
+var audio_analyser = null;
+var audio_mp3_encoder = null;
+var users = null;   // 用户列表
+var chats = {};     // 当前的聊天语音
+var my = null;      // 当前用户
+var my_chat = null; // 我的语音
+var my_chat_begin = null; // 我的语音开始时间
+
+// 避免临时创建 worker 带来的延时
+audio_mp3_encoder = new Worker('/static/encoder.js');
+
+// 创建 webssocket
+function create_websocket(){
+    console.log("websocket create");
+    ws = new WebSocket("wss://" + location.host + "/ws?user={{user}}");
+    ws.binaryType = "arraybuffer";
+    ws.onopen = function(evt) { 
+        console.log("websocket open");
+    }; 
+    ws.onclose = function(evt) { 
+        $("#speak").attr("disabled", "disabled");
+        console.log("websocket close");
+        setTimeout(create_websocket, 1000);
+    }; 
+    ws.onmessage = function(evt) { 
+        var arr8 = new Int8Array(evt.data);
+        
+        if(get_data_type(arr8) == 0){
+            // json data
+            var json = get_data_json(arr8);
+            
+            console.log(json);
+
+            if(json.type == "connect"){
+                if(json.success){
+                    my = json.data;
+                    $("#speak").removeAttr("disabled");
+                }
+                else{
+                    $("#speak").attr("disabled", "disabled");
+                }
+            }
+            else if(json.type == "user_list"){
+                if(json.success){
+                    users = {};
+                    $("#user_list").html("");
+                    $(json.data).each(function(i, user){
+                        user.view = $("<li>" + user.name + "</li>");
+                        $("#user_list").append(user.view);
+                        users[user.id] = user;
+                    });
+                    console.log("user list change");
+                }
+            }
+            else if(json.type == "audio_open"){
+                if(json.success){
+                    var user_id = json.data.id;
+                    var user = users[user_id];
+                    chats[user_id] = new Uint8Array(0);
+                    user.view.addClass("speaking");
+                }
+            }
+            else if(json.type == "audio_close"){
+                if(json.success){                    
+                    var user_id     = json.data.id;
+                    var audio_len   = json.data.end - json.data.begin
+                    var user = users[user_id];
+                    user.view.removeClass("speaking");
+
+                    if(audio_len > 1.0){
+                        console.log(chats[user_id].byteLength);
+
+                        var blob = new Blob([chats[user_id]]);
+                        var player = new window.Audio();
+                        player.volume = 1.0;
+                        player.src = window.URL.createObjectURL(blob);
+                        console.log("readyState", player.readyState);
+
+                        player.addEventListener('ended', function(event){
+                            $(this).parent().removeClass("playing")
+                            var next =  $(this).parent().next().find("audio");
+                            if(next[0]){
+                                play_audio(next[0]);
+                            }
+                        });
+                        
+                        var player_link = $("<a href='#' class='chat'>" +  + "</a>");
+                        var player_user = $("<span class='user'>" + user.name + "</span>");
+                        var player_audio_info = $("<span class='audio_info'>" + audio_len.toFixed(2) + " 秒</span>");
+                        player_link.append(player_user);
+                        player_link.append(player_audio_info);
+                        player_link.append(player);
+                        $("#chats").append(player_link);
+
+                        play_audio(player, false);
+                    }
+                }
+            }
+        }
+        else if(get_data_type(arr8) == 1){
+            var user_id = arr8[3];
+            var user = users[arr8[3]];
+            chats[user_id] = AppendArrayBuffer(chats[user_id], get_data_binary(arr8));
+        }
+    }; 
+    ws.onerror = function(evt) { 
+        console.log("websocket error");
+    }; 
+}
+
+function play_audio(player, stop_last){
+    // already playing, then return
+    if($("a.chat.playing")[0]){
+        var last = $("a.chat.playing").find("audio")[0];
+
+        if(last === player){
+            // 点击的是正在播放的，则停止
+            last.pause();
+            last.currentTime = 0;
+            $("a.chat.playing").removeClass("playing");
+            return;
+        }
+        
+        if(stop_last){
+            // 停止当前正在播放的
+            
+            last.pause();
+            last.currentTime = 0;
+            $("a.chat.playing").removeClass("playing");
+        }
+        else{
+            return;
+        }
+    }
+        
+    player.play();
+    $(player).parent().addClass("playing");
+}
+
+function on_audioprocess(e){
+    var data = e.inputBuffer.getChannelData(0);
+
+    // resample 48k -> 8k
+    var len  = audio_resampler.resampler(data); 
+    data = audio_resampler.outputBuffer.subarray(0, len);
+    audio_mp3_encoder.postMessage({ cmd: 'encode', buf: data });
+}
+
+function on_media_open_success(stream){
+    audio_stream = stream
+    console.log("on_media_open_success");
+    
+    audio_input = audio_context.createMediaStreamSource(audio_stream);
+    audio_recorder      = audio_context.createScriptProcessor(sample_size, 1, 1);
+    audio_resampler     = new Resampler(audio_context.sampleRate, sampler_rate, 1, sample_size, true);
+    audio_recorder.onaudioprocess = on_audioprocess;
+    audio_analyser      = audio_context.createAnalyser();    
+
+    audio_mp3_encoder.onmessage = function(e) {
+        var data = e.data.buf;
+        if(data.length == 0) return;
+        if(ws){
+            var frame = new Uint8Array(data.length + 4);
+            frame.set([1, 0, 0, 0])
+            frame.set(data, 4);
+            ws.send(frame);
+
+            my_chat = AppendArrayBuffer(my_chat, data);
+            // console.log("send mp3 data", data.length);
+        }
+    };
+    audio_mp3_encoder.postMessage({ 
+        cmd: 'init', 
+        config: { samplerate: sampler_rate, bitrate: bit_rate , channels: 1, mode: Lame.MONO}
+    });
+
+    audio_input.connect(audio_analyser);
+    audio_analyser.connect(audio_recorder);
+    audio_recorder.connect(audio_context.destination);
+
+    on_update_analyser();
+}
+
+function on_update_analyser(){
+    var canvas = document.getElementById('fft');
+    if(!canvas) return;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = "white";
+
+    window.requestAnimFrame(on_update_analyser, canvas);
+
+    var offset = 0;
+    var spacing = 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if(speaking)
+    {
+        var data = new Uint8Array(audio_analyser.frequencyBinCount);
+        audio_analyser.getByteFrequencyData(data);
+        
+        for (var i = 0; i < data.length; i++) {
+            var m = data[i + offset];
+            ctx.fillRect(i * spacing, canvas.height, spacing / 2, - m);
+        };
+    }
+}
+
+function on_media_open_fail(e){
+    console.log(e);
+}
+
+function audio_open(){
+    if(!navigator.getUserMedia) {
+        console.log("unsupport webRTC");
+        return;
+    }
+
+    console.log("audio open");
+    navigator.getUserMedia(
+        {
+            video: false,
+            audio: true
+        },
+        on_media_open_success,
+        on_media_open_fail
+    );
+}
+
+function audio_close(){
+    console.log("audio close");
+    
+    if(audio_stream){
+        audio_stream.stop();
+    }
+    if(audio_recorder){
+        audio_recorder.disconnect();
+    }
+
+    audio_mp3_encoder.postMessage({ cmd: 'finish' });
+}
+
+function begin_speak(){
+    $('body').addClass('noselect');
+    
+    mode_speaking();
+    audio_open();
+
+    my_chat = new ArrayBuffer(0);
+    my_chat_begin = (new Date()).valueOf() / 1000.0;
+    if(ws) ws.send(gen_data_json({"type": "audio_open"}));
+}
+
+function end_speak() {
+    if (speaking) {
+        $('body').removeClass('noselect');
+
+        mode_speak();
+        audio_close();
+        if(ws) ws.send(gen_data_json({"type": "audio_close"}));
+        $("#speak").text($("#speak").attr("speak"));
+
+        var my_chat_end = (new Date()).valueOf() / 1000.0;
+        var my_chat_len = my_chat_end - my_chat_begin;
+        if(my_chat_len > 1.0)
+        {
+            var blob = new Blob([my_chat]);
+            var player = new window.Audio();
+            player.volume = 1.0;
+            player.src = window.URL.createObjectURL(blob);
+            console.log("readyState", player.readyState);
+
+            player.addEventListener('ended', function(event){
+                $(this).parent().removeClass("playing")
+                var next =  $(this).parent().next().find("audio");
+                if(next[0]){
+                    play_audio(next[0]);
+                }
+            });
+            
+            var player_link = $("<a href='#' class='chat'>" +  + "</a>");
+            var player_user = $("<span class='user'>" + my.name + "</span>");
+            var player_audio_info = $("<span class='audio_info'>" + my_chat_len.toFixed(2) + " 秒</span>");
+            player_link.append(player_user);
+            player_link.append(player_audio_info);
+            player_link.append(player);
+            $("#chats").append(player_link);
+        }
+        
+    }
+}
+
+$(function(){
+    create_websocket();
+
+    
+    $("#speak").mousedown(function(){
+        if(!speaking){
+            begin_speak();
+        }
+    });
+    $(document).mouseup(function(){
+        if(speaking){
+            setTimeout(end_speak, 300); // 延时 300ms 避免语音被截断
+        }
+    });
+
+    $(document).keydown(function(e) {
+        if(e.keyCode == 32 && !speaking){
+            begin_speak();
+        }        
+    }).keyup(function(e) {
+        if(e.keyCode == 32 && speaking){
+            setTimeout(end_speak, 300); // 延时 300ms 避免语音被截断
+        }
+    })
+
+    $("#chats").on("click", "a.chat", function(){
+        var player = $(this).find("audio")[0];
+        play_audio(player, true);
+    });
+
+    // default mode
+    mode_speak();
+    audio_context = new window.AudioContext();
+
+    navigator.getUserMedia(
+        {
+            video: false,
+            audio: true
+        },
+        function(s){s.stop()},
+        function(){}
+    );
+    
+});
+</script>
+</head>
+<body>    
+    <div id="users">
+        <ul id="user_list">
+        </ul>
+        <canvas id="fft"></canvas>
+        <button id="speak" disabled="disabled" speak="speak" speaking="speaking ..."></button>
+    </div>
+    <div id="chats">
+        按下 “Speak” 按钮说话，松开按钮结束说话，也可通过空格键控制
+    </div>
+</body>
+</html>
